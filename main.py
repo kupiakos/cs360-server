@@ -7,6 +7,8 @@ class EchoServer(AsyncServer):
         print('Starting echo client', client.fileno())
         while True:
             data = await client.recv(2048)
+            if not data:
+                break
             print('Client', client.fileno(), 'received', repr(data))
             if not data:
                 break

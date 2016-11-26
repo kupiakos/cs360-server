@@ -5,13 +5,13 @@ from asyncselectors import AsyncEpollSelector
 
 
 class AsyncSocket:
-    def __init__(self, selector: AsyncEpollSelector, sock=None):
+    def __init__(self, selector: AsyncEpollSelector, sock=None, timeout=True):
         self.selector = selector
         if sock is None:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setblocking(False)
         self.socket = sock
-        self.selector.register(self.fileno(), select.EPOLLIN | select.EPOLLHUP | select.EPOLLERR)
+        self.selector.register(self.fileno(), select.EPOLLIN | select.EPOLLHUP | select.EPOLLERR, timeout=timeout)
 
     def __await__(self):
         return self.selector.wait(self.socket.fileno()).__await__()

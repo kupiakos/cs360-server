@@ -1,5 +1,5 @@
 import asyncio
-from inspect import isawaitable
+from asyncio.coroutines import iscoroutinefunction
 from typing import Tuple
 
 from asyncselectors import AsyncEpollSelector
@@ -12,28 +12,45 @@ class AsyncServer:
         self.selector = AsyncEpollSelector(loop=self.loop)
 
     async def _handle_client(self, client: AsyncSocket):
-        with client:
-            if isawaitable(self.handle_client):
+        try:
+            if iscoroutinefunction(self.handle_client):
                 await self.handle_client(client)
             else:
                 self.handle_client(client)
+        except Exception as e:
+            print('Error with client:', e)
+        finally:
+            client.close()
 
-    async def server_loop(self, address: Tuple[str, int]):
-        with AsyncSocket(self.selector) as server:
-            server.bind(address)
-            server.listen()
-            print('Listening on {}:{}'.format(*address))
+    async def server_loop(self, server: AsyncSocket):
+        try:
             while True:
                 client, address = await server.accept()
                 print('New client', client.fileno(), 'from', address)
                 self.loop.create_task(self._handle_client(client))
+        except Exception as e:
+            print('Error with server:', e)
+        finally:
+            server.close()
 
     async def handle_client(self, client: AsyncSocket):
         raise NotImplementedError
 
     def run(self, address: Tuple[str, int], timeout=None):
+        server = AsyncSocket(self.selector, timeout=False)
+        try:
+            server.bind(address)
+            server.listen()
+            print('Listening on {}:{}'.format(*address))
+        except OSError as e:
+            print('Could not bind socket!', e)
+            server.close()
+            return
+
         tasks = [
             self.selector.poll(),
-            self.server_loop(address),
+            self.server_loop(server),
         ]
+        if timeout:
+            tasks.append(self.selector.timeout_loop(timeout))
         self.loop.run_until_complete(asyncio.gather(*tasks))
