@@ -1,6 +1,5 @@
-import socket
-
 import select
+import socket
 
 from asyncselectors import AsyncEpollSelector
 
@@ -44,6 +43,10 @@ class AsyncSocket:
     async def recv(self, size):
         await self
         return self.socket.recv(size)
+
+    async def recv_into(self, buffer, *args):
+        await self
+        return self.socket.recv_into(buffer, *args)
 
     def send(self, data):
         return self.socket.send(data)
