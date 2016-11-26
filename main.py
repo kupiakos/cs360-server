@@ -13,11 +13,27 @@ class EchoServer(AsyncServer):
             if not data:
                 break
             client.send(data)
+        print('Finished client', client.fileno())
+
+
+class HttpServer(AsyncServer):
+    async def handle_client(self, client: AsyncSocket):
+        data = b'Hello world!'
+        response = (
+            b'HTTP/1.1 200 OK\r\n' +
+            b'Content-Length: %d\r\n' % len(data) +
+            b'Content-Type: text/html\r\n'
+            b'\r\n' + data
+        )
+        await client.recv(4096)
+        client.sendall(response)
 
 
 def main():
-    server = EchoServer()
-    server.run(('localhost', 8085))
+    # import asyncio
+    # asyncio.get_event_loop().set_debug(True)
+    server = HttpServer()
+    server.run(('localhost', 8085), timeout=2)
 
 
 if __name__ == '__main__':
