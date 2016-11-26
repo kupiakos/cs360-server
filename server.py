@@ -1,5 +1,5 @@
 import asyncio
-from asyncio.coroutines import iscoroutinefunction
+from inspect import isawaitable
 from typing import Tuple
 
 from asyncselectors import AsyncEpollSelector
@@ -11,6 +11,13 @@ class AsyncServer:
         self.loop = loop or asyncio.get_event_loop()
         self.selector = AsyncEpollSelector(loop=self.loop)
 
+    async def _handle_client(self, client: AsyncSocket):
+        with client:
+            if isawaitable(self.handle_client):
+                await self.handle_client(client)
+            else:
+                self.handle_client(client)
+
     async def server_loop(self, address: Tuple[str, int]):
         with AsyncSocket(self.selector) as server:
             server.bind(address)
@@ -19,13 +26,10 @@ class AsyncServer:
             while True:
                 client, address = await server.accept()
                 print('New client', client.fileno(), 'from', address)
-                if iscoroutinefunction(self.handle_client):
-                    self.loop.create_task(self.handle_client(client))
-                else:
-                    self.loop.call_soon(self.handle_client, client)
+                self.loop.create_task(self._handle_client(client))
 
     async def handle_client(self, client: AsyncSocket):
-        client.close()
+        raise NotImplementedError
 
     def run(self, address: Tuple[str, int], timeout=None):
         tasks = [
