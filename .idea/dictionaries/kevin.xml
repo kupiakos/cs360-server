@@ -3,8 +3,10 @@
     <words>
       <w>epoll</w>
       <w>fileno</w>
+      <w>fileobj</w>
       <w>poller</w>
       <w>setsockopt</w>
+      <w>unregister</w>
     </words>
   </dictionary>
 </component>
