@@ -1,4 +1,5 @@
 import time
+import traceback
 from email.utils import formatdate
 from typing import Tuple, Optional
 
@@ -55,7 +56,7 @@ class BaseHttpServer(AsyncServer):
                 if not request.should_keep_alive():
                     break
         except Exception as e:
-            print(e)
+            traceback.print_exc()
             try:
                 await _send_response(client, HttpResponse(500, str(e)))
             except IOError:

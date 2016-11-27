@@ -1,4 +1,5 @@
 import os
+import re
 from email.utils import formatdate
 from urllib.request import url2pathname
 
@@ -32,15 +33,40 @@ class HttpFileServer(BaseHttpServer):
         relative = os.path.relpath(url2pathname(path), '/')
         filename = os.path.join(self.root_dir, relative)
         try:
+            byte_range = None
+            if 'Range' in request.get_headers():
+                # Not RFC 7233 compliant
+                range_match = re.match(r'bytes=(\d+)-(\d+)', request.get_headers()['Range'])
+                if not range_match:
+                    return HttpResponse(400, 'Invalid Range header')
+                start, end = map(int, range_match.groups())
+                # Python range is exclusive, HTTP Range is inclusive
+                byte_range = range(start, end + 1)
+            length = 0
             async with aiofiles.open(filename, 'rb') as f:
                 if method == 'GET':
-                    data = await f.read()
-                    response = HttpResponse(200, data)
+                    if byte_range is not None:
+                        await f.seek(byte_range.start)
+                        data = await f.read(len(byte_range))
+                        byte_range = range(byte_range.start, byte_range.start + len(data))
+                        await f.seek(0, os.SEEK_END)
+                        length = await f.tell()
+                        response = HttpResponse(206, data)
+                    else:
+                        data = await f.read()
+                        response = HttpResponse(200, data)
                 else:
                     # Used instead of os.stat to ensure the file can be accessed
                     response = HttpResponse(200)
-                    f.seek(0, os.SEEK_END)
-                    response.headers['Content-Length'] = f.tell()
+                    await f.seek(0, os.SEEK_END)
+                    length = await f.tell()
+                    if byte_range is not None:
+                        byte_range = range(byte_range.start, min(length, byte_range.stop))
+                    response.headers['Content-Length'] = length
+            if byte_range is not None:
+                response.headers['Content-Range'] = 'bytes %d-%d/%d' % (
+                    byte_range.start, byte_range.stop - 1, length)
+
         except FileNotFoundError:
             return HttpResponse(
                 404, 'This is not the file you are looking for')
