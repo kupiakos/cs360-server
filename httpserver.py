@@ -1,3 +1,5 @@
+import time
+from email.utils import formatdate
 from typing import Tuple, Optional
 
 from httpresponse import HttpResponse
@@ -13,8 +15,9 @@ from server import AsyncServer
 
 
 async def _send_response(client: AsyncSocket, response: HttpResponse):
+    response.headers['Server'] = 'kupiakos server'
+    response.headers['Date'] = formatdate(time.time(), False, True)
     client.sendall(bytes(response))
-    client.close()
 
 
 async def _recv_request(client: AsyncSocket, prefix: bytes) -> Tuple[Optional[HttpParser], bytes]:
@@ -28,6 +31,9 @@ async def _recv_request(client: AsyncSocket, prefix: bytes) -> Tuple[Optional[Ht
         if not data:
             return None, b''
         num_parsed = p.execute(data, len(data))
+        if not p.is_message_complete() and num_parsed < len(data):
+            # Bad request and couldn't parse the content properly
+            return p, b''
     return p, data[num_parsed:]
 
 
@@ -38,19 +44,22 @@ class BaseHttpServer(AsyncServer):
             while True:
                 request, left = await _recv_request(client, left)
                 if not request:
+                    client.close()
                     break
-                if not (request.get_url() and request.get_method()):
+                if not (request.is_message_complete() and request.get_url() and request.get_method()):
                     print('Invalid response')
                     await _send_response(client, HttpResponse(400))
                 '%s %s' % (request.get_method(), request.get_path())
                 response = await call_maybe_async(self.handle_url, request)
-                response.headers['Server'] = 'kupiakos server'
-                client.sendall(bytes(response))
+                await _send_response(client, response)
                 if not request.should_keep_alive():
                     break
         except Exception as e:
             print(e)
-            await _send_response(client, HttpResponse(500, str(e)))
+            try:
+                await _send_response(client, HttpResponse(500, str(e)))
+            except IOError:
+                pass
 
     def handle_url(self, request: HttpParser) -> HttpResponse:
         return HttpResponse(

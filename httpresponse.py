@@ -24,6 +24,10 @@ class HttpResponse:
 
     def _standard_headers(self):
         if 'Content-Length' not in self.headers:
+            if not self.content:
+                self.content = '%03d %s' % (
+                    self.response_code,
+                    status_reasons.get(self.response_code, 'Unknown'))
             self.headers['Content-Length'] = len(self.content)
         if 'Content-Type' not in self.headers:
             self.headers['Content-Type'] = b'text/html'

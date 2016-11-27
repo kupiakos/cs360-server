@@ -25,8 +25,7 @@ class HttpFileServer(BaseHttpServer):
     async def handle_url(self, request: HttpParser) -> HttpResponse:
         method = request.get_method().upper()
         if method not in ('GET', 'HEAD'):
-            # Should be HTTP 405...
-            return HttpResponse(501)
+            return HttpResponse(405)
         path = request.get_path()
         if path.endswith('/'):
             path += 'index.html'
