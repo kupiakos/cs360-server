@@ -24,7 +24,7 @@ class AsyncServer:
         try:
             while True:
                 client, address = await server.accept()
-                print('New client', client.fileno(), 'from', address)
+                # print('New client', client.fileno(), 'from', address)
                 self.loop.create_task(self._handle_client(client))
         except Exception as e:
             print('Error with server:', e)
