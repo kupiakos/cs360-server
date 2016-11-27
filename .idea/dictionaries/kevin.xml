@@ -4,6 +4,7 @@
       <w>epoll</w>
       <w>fileno</w>
       <w>fileobj</w>
+      <w>kupiakos</w>
       <w>poller</w>
       <w>setsockopt</w>
       <w>unregister</w>

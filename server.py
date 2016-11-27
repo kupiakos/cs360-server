@@ -1,9 +1,10 @@
 import asyncio
-from asyncio.coroutines import iscoroutinefunction
+import socket
 from typing import Tuple
 
 from asyncselectors import AsyncEpollSelector
 from asyncsocket import AsyncSocket
+from utils import call_maybe_async
 
 
 class AsyncServer:
@@ -13,10 +14,7 @@ class AsyncServer:
 
     async def _handle_client(self, client: AsyncSocket):
         try:
-            if iscoroutinefunction(self.handle_client):
-                await self.handle_client(client)
-            else:
-                self.handle_client(client)
+            await call_maybe_async(self.handle_client, client)
         except Exception as e:
             print('Error with client:', e)
         finally:
@@ -41,6 +39,7 @@ class AsyncServer:
         try:
             server.bind(address)
             server.listen()
+            server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             print('Listening on {}:{}'.format(*address))
         except OSError as e:
             print('Could not bind socket!', e)
