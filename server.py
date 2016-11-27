@@ -37,9 +37,9 @@ class AsyncServer:
     def run(self, address: Tuple[str, int], timeout=None):
         server = AsyncSocket(self.selector, timeout=False)
         try:
+            server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server.bind(address)
             server.listen()
-            server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             print('Listening on {}:{}'.format(*address))
         except OSError as e:
             print('Could not bind socket!', e)

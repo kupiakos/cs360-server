@@ -1,3 +1,5 @@
+import time
+from email.utils import formatdate
 from typing import Union
 
 from http_parser.util import IOrderedDict, status_reasons
@@ -21,9 +23,12 @@ class HttpResponse:
         self._standard_headers()
 
     def _standard_headers(self):
-        self.headers['Content-Length'] = len(self.content)
+        if 'Content-Length' not in self.headers:
+            self.headers['Content-Length'] = len(self.content)
         if 'Content-Type' not in self.headers:
             self.headers['Content-Type'] = b'text/html'
+        if 'Date' not in self.headers:
+            self.headers['Date'] = formatdate(time.time(), False, True)
 
     def __bytes__(self):
         self._standard_headers()
