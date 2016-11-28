@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+import sys
+if sys.version_info.minor < 5:
+    raise Exception('Must use Python 3.5 or above!')
+
 import argparse
 import asyncio
 import shlex
